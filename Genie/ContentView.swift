@@ -6,11 +6,10 @@ struct ContentView: View {
     @State private var diScale: CGFloat = 1.0
     @State private var showControls = false
 
-    // Defaults tuned to match the macOS genie reference
-    static let defaultDuration:  Double = 0.45
-    static let defaultBotPower:  Double = 4.0   // bottom snaps up in final ~20%
-    static let defaultSqueezeA:  Double = 5.0   // very wide funnel, pronounced curve
-    static let defaultFadeDist:  Double = 30.0
+    static let defaultDuration:  Double = 0.75
+    static let defaultBotPower:  Double = 5.0   // stagger spread (0–10)
+    static let defaultSqueezeA:  Double = 20.0  // horizontal scatter in pts
+    static let defaultFadeDist:  Double = 10.0  // pixel block size in pts
 
     @State private var collapseDuration: Double = defaultDuration
     @State private var botPower: Double         = defaultBotPower
@@ -128,9 +127,7 @@ struct ContentView: View {
     }
 
     func collapse() {
-        // Linear so the top edge races upward immediately at constant speed —
-        // the dramatic bottom-lag in the shader provides all the timing feel.
-        withAnimation(.linear(duration: collapseDuration)) {
+        withAnimation(.easeIn(duration: collapseDuration)) {
             progress = 1.0
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + collapseDuration - 0.03) {
@@ -204,10 +201,10 @@ struct ControlSheet: View {
             .padding(.bottom, 22)
 
             VStack(spacing: 20) {
-                SliderRow(label: "Speed",      value: $collapseDuration, range: 0.2...1.2,  format: "%.2fs")
-                SliderRow(label: "Suck Power", value: $botPower,         range: 1.0...6.0,  format: "%.1f")
-                SliderRow(label: "Squeeze",    value: $squeezeA,         range: 1.0...6.0,  format: "%.1f")
-                SliderRow(label: "Fade Zone",  value: $tailFadeDist,     range: 10...200,   format: "%.0fpt")
+                SliderRow(label: "Speed",      value: $collapseDuration, range: 0.2...1.5,  format: "%.2fs")
+                SliderRow(label: "Stagger",    value: $botPower,         range: 0.0...10.0, format: "%.1f")
+                SliderRow(label: "Scatter",    value: $squeezeA,         range: 0.0...60.0, format: "%.0f")
+                SliderRow(label: "Block Size", value: $tailFadeDist,     range: 4...24,     format: "%.0fpt")
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 44)
