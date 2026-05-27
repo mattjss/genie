@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct ContentView: View {
     @State private var progress: Double = 0
@@ -22,11 +23,8 @@ struct ContentView: View {
                 Color.white.ignoresSafeArea()
 
                 // Card
-                Image("Image")
-                    .resizable()
-                    .scaledToFill()
+                LoopingVideoView(url: Bundle.main.url(forResource: "card_video", withExtension: "mp4")!)
                     .frame(width: cardW, height: cardH)
-                    .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .layerEffect(
                         ShaderLibrary.genieEffect(
@@ -93,24 +91,19 @@ struct ContentView: View {
                     .zIndex(10)
                 }
 
-                // Floating trigger pill — hides when sheet is open
+                // Floating trigger — icon only
                 if !showControls {
                     Button {
                         withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
                             showControls = true
                         }
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Tune")
-                                .font(.system(size: 15, weight: .semibold))
-                        }
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 11)
-                        .background(.regularMaterial, in: Capsule())
-                        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .frame(width: 44, height: 44)
+                            .background(.regularMaterial, in: Circle())
+                            .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
                     }
                     .padding(.bottom, 44)
                     .transition(.scale(scale: 0.85).combined(with: .opacity))
@@ -151,6 +144,46 @@ struct ContentView: View {
     }
 }
 
+// Silently looping video, fills its frame (aspect-fill like scaledToFill).
+struct LoopingVideoView: UIViewRepresentable {
+    let url: URL
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = PlayerView()
+        let player = AVPlayer(url: url)
+        player.isMuted = true
+        player.actionAtItemEnd = .none
+        player.play()
+
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: player.currentItem,
+            queue: .main
+        ) { [weak player] _ in
+            player?.seek(to: .zero)
+            player?.play()
+        }
+
+        (view.layer as! AVPlayerLayer).player = player
+        (view.layer as! AVPlayerLayer).videoGravity = .resizeAspectFill
+        context.coordinator.player = player
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {}
+
+    class Coordinator {
+        var player: AVPlayer?
+    }
+
+    // UIView subclass whose backing layer is AVPlayerLayer
+    class PlayerView: UIView {
+        override class var layerClass: AnyClass { AVPlayerLayer.self }
+    }
+}
+
 struct ControlSheet: View {
     @Binding var collapseDuration: Double
     @Binding var botPower: Double
@@ -162,14 +195,12 @@ struct ControlSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Drag handle
             Capsule()
                 .fill(Color.secondary.opacity(0.35))
                 .frame(width: 36, height: 5)
                 .padding(.top, 10)
                 .padding(.bottom, 20)
 
-            // Title row
             HStack {
                 Text("Animation")
                     .font(.system(size: 17, weight: .semibold))
@@ -184,7 +215,6 @@ struct ControlSheet: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 22)
 
-            // Sliders
             VStack(spacing: 20) {
                 SliderRow(label: "Speed",      value: $collapseDuration, range: 0.2...1.2,  format: "%.2fs")
                 SliderRow(label: "Suck Power", value: $botPower,         range: 1.0...6.0,  format: "%.1f")
@@ -203,9 +233,7 @@ struct ControlSheet: View {
         .gesture(
             DragGesture()
                 .onChanged { drag in
-                    if drag.translation.height > 0 {
-                        dragOffset = drag.translation.height
-                    }
+                    if drag.translation.height > 0 { dragOffset = drag.translation.height }
                 }
                 .onEnded { drag in
                     if drag.translation.height > 80 {
