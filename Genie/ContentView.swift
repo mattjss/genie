@@ -6,10 +6,10 @@ struct ContentView: View {
     @State private var diScale: CGFloat = 1.0
     @State private var showControls = false
 
-    static let defaultDuration:  Double = 0.55
-    static let defaultBotPower:  Double = 5.0   // higher = more bottom lag
-    static let defaultSqueezeA:  Double = 6.0   // funnel curve steepness
-    static let defaultFadeDist:  Double = 80.0  // S-curve bulge amount
+    static let defaultDuration:  Double = 0.6
+    static let defaultBotPower:  Double = 7.0   // heavy bottom lag
+    static let defaultSqueezeA:  Double = 8.0   // aggressive funnel
+    static let defaultFadeDist:  Double = 60.0  // portal warp intensity
 
     @State private var collapseDuration: Double = defaultDuration
     @State private var botPower: Double         = defaultBotPower
@@ -127,9 +127,8 @@ struct ContentView: View {
     }
 
     func collapse() {
-        // Linear so the top edge races upward immediately at constant speed —
-        // the dramatic bottom-lag in the shader provides all the timing feel.
-        withAnimation(.linear(duration: collapseDuration)) {
+        // Slow build then snap — mimics vacuum suction
+        withAnimation(.timingCurve(0.4, 0.0, 0.8, 1.0, duration: collapseDuration)) {
             progress = 1.0
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + collapseDuration - 0.03) {
