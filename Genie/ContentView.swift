@@ -1,5 +1,4 @@
 import SwiftUI
-import AVFoundation
 
 struct ContentView: View {
     @State private var progress: Double = 0
@@ -23,8 +22,11 @@ struct ContentView: View {
                 Color.white.ignoresSafeArea()
 
                 // Card
-                LoopingVideoView(url: Bundle.main.url(forResource: "card_video", withExtension: "mp4")!)
+                Image("Image")
+                    .resizable()
+                    .scaledToFill()
                     .frame(width: cardW, height: cardH)
+                    .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .layerEffect(
                         ShaderLibrary.genieEffect(
@@ -141,46 +143,6 @@ struct ContentView: View {
                 self.progress = 0.0
             }
         }
-    }
-}
-
-// Silently looping video, fills its frame (aspect-fill like scaledToFill).
-struct LoopingVideoView: UIViewRepresentable {
-    let url: URL
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = PlayerView()
-        let player = AVPlayer(url: url)
-        player.isMuted = true
-        player.actionAtItemEnd = .none
-        player.play()
-
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: player.currentItem,
-            queue: .main
-        ) { [weak player] _ in
-            player?.seek(to: .zero)
-            player?.play()
-        }
-
-        (view.layer as! AVPlayerLayer).player = player
-        (view.layer as! AVPlayerLayer).videoGravity = .resizeAspectFill
-        context.coordinator.player = player
-        return view
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {}
-
-    class Coordinator {
-        var player: AVPlayer?
-    }
-
-    // UIView subclass whose backing layer is AVPlayerLayer
-    class PlayerView: UIView {
-        override class var layerClass: AnyClass { AVPlayerLayer.self }
     }
 }
 
