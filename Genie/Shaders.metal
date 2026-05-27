@@ -30,12 +30,13 @@ using namespace metal;
     // Normalised row (0 = top of live shape, 1 = bottom)
     float py_src = (py_screen - animTopY) / max(animBotY - animTopY, 0.001);
 
-    // Horizontal squeeze: each row follows t^(1 + py_src * squeezeA).
-    // Top row (py_src=0) → t^1 (squeezes with t).
-    // Bottom row (py_src=1) → t^(1+squeezeA) (much slower start → convex curved sides).
-    // This is what makes the sides bow outward instead of being straight lines.
+    // Phase 1 (t < 0.18): pure vertical stretch, no squeeze — card elongates visibly.
+    // Phase 2 (t ≥ 0.18): squeeze kicks in with per-row curved power law.
+    // Each row follows tSq^(1 + py_src * squeezeA):
+    //   top row squeezes at t^1 (fastest), bottom at t^(1+squeezeA) (slowest → convex sides).
+    float tSq     = max(0.0, (t - 0.18) / 0.82);   // remapped squeeze-only progress
     float rowPow  = 1.0 + py_src * squeezeA;
-    float squeeze = pow(max(t, 0.0), rowPow);
+    float squeeze = pow(tSq, rowPow);
     float rowW    = mix(1.0, pillRatio, squeeze);
 
     float leftEdge  = 0.5 - rowW * 0.5;

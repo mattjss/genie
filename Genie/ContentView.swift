@@ -7,9 +7,9 @@ struct ContentView: View {
     @State private var showControls = false
 
     // Defaults tuned to match the macOS genie reference
-    static let defaultDuration:  Double = 0.5
+    static let defaultDuration:  Double = 0.55
     static let defaultBotPower:  Double = 3.0
-    static let defaultSqueezeA:  Double = 3.0   // exponent scale — 3 gives strong convex curve
+    static let defaultSqueezeA:  Double = 4.0   // exponent scale — higher = more convex, bottom lags longer
     static let defaultFadeDist:  Double = 55.0
 
     @State private var collapseDuration: Double = defaultDuration
@@ -128,7 +128,7 @@ struct ContentView: View {
     }
 
     func collapse() {
-        withAnimation(.easeIn(duration: collapseDuration)) {
+        withAnimation(.easeInOut(duration: collapseDuration)) {
             progress = 1.0
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + collapseDuration - 0.03) {
@@ -149,7 +149,7 @@ struct ContentView: View {
         progress    = 1.0
         isCollapsed = false
         DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: collapseDuration)) {
+            withAnimation(.easeInOut(duration: collapseDuration)) {
                 self.progress = 0.0
             }
         }
