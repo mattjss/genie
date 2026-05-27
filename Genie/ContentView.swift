@@ -7,9 +7,9 @@ struct ContentView: View {
     @State private var showControls = false
 
     // Defaults tuned to match the macOS genie reference
-    static let defaultDuration:  Double = 0.42
+    static let defaultDuration:  Double = 0.5
     static let defaultBotPower:  Double = 3.0
-    static let defaultSqueezeA:  Double = 2.6
+    static let defaultSqueezeA:  Double = 3.0   // exponent scale — 3 gives strong convex curve
     static let defaultFadeDist:  Double = 55.0
 
     @State private var collapseDuration: Double = defaultDuration
@@ -204,7 +204,7 @@ struct ControlSheet: View {
             VStack(spacing: 20) {
                 SliderRow(label: "Speed",      value: $collapseDuration, range: 0.2...1.2,  format: "%.2fs")
                 SliderRow(label: "Suck Power", value: $botPower,         range: 1.0...6.0,  format: "%.1f")
-                SliderRow(label: "Squeeze",    value: $squeezeA,         range: 1.0...4.0,  format: "%.1f")
+                SliderRow(label: "Squeeze",    value: $squeezeA,         range: 1.0...6.0,  format: "%.1f")
                 SliderRow(label: "Fade Zone",  value: $tailFadeDist,     range: 10...200,   format: "%.0fpt")
             }
             .padding(.horizontal, 20)
