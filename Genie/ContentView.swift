@@ -6,7 +6,6 @@ struct ContentView: View {
     @State private var diScale: CGFloat = 1.0
     @State private var showControls = false
 
-    // Tunable parameters
     @State private var collapseDuration: Double = 0.45
     @State private var botPower: Double = 3.0
     @State private var squeezeA: Double = 2.2
@@ -19,7 +18,7 @@ struct ContentView: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack {
+            ZStack(alignment: .bottom) {
                 Color.white.ignoresSafeArea()
 
                 // Card
@@ -65,34 +64,57 @@ struct ContentView: View {
                         .position(x: geo.size.width / 2, y: 55)
                 }
 
-                // Controls toggle button
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Button {
-                            withAnimation(.spring(response: 0.3)) { showControls.toggle() }
-                        } label: {
-                            Image(systemName: showControls ? "slider.horizontal.3" : "slider.horizontal.3")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.black)
-                                .padding(12)
-                                .background(.ultraThinMaterial, in: Circle())
+                // Scrim
+                if showControls {
+                    Color.black.opacity(0.25)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                showControls = false
+                            }
                         }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, showControls ? 0 : 40)
-                    }
+                }
 
-                    if showControls {
-                        ControlPanel(
-                            collapseDuration: $collapseDuration,
-                            botPower: $botPower,
-                            squeezeA: $squeezeA,
-                            tailFadeDist: $tailFadeDist
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 40)
+                // Bottom sheet
+                if showControls {
+                    ControlSheet(
+                        collapseDuration: $collapseDuration,
+                        botPower: $botPower,
+                        squeezeA: $squeezeA,
+                        tailFadeDist: $tailFadeDist,
+                        onClose: {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
+                                showControls = false
+                            }
+                        }
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(10)
+                }
+
+                // Floating trigger pill — hides when sheet is open
+                if !showControls {
+                    Button {
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                            showControls = true
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Tune")
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 11)
+                        .background(.regularMaterial, in: Capsule())
+                        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
                     }
+                    .padding(.bottom, 44)
+                    .transition(.scale(scale: 0.85).combined(with: .opacity))
+                    .zIndex(5)
                 }
             }
             .ignoresSafeArea()
@@ -101,7 +123,6 @@ struct ContentView: View {
     }
 
     func collapse() {
-        // easeIn: starts slow, accelerates into the DI (suction feel)
         withAnimation(.easeIn(duration: collapseDuration)) {
             progress = 1.0
         }
@@ -130,21 +151,73 @@ struct ContentView: View {
     }
 }
 
-struct ControlPanel: View {
+struct ControlSheet: View {
     @Binding var collapseDuration: Double
     @Binding var botPower: Double
     @Binding var squeezeA: Double
     @Binding var tailFadeDist: Double
+    let onClose: () -> Void
+
+    @State private var dragOffset: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: 14) {
-            SliderRow(label: "Speed",        value: $collapseDuration, range: 0.2...1.2,  format: "%.2fs")
-            SliderRow(label: "Suck Power",   value: $botPower,         range: 1.0...6.0,  format: "%.1f")
-            SliderRow(label: "Squeeze",      value: $squeezeA,         range: 1.0...4.0,  format: "%.1f")
-            SliderRow(label: "Fade Zone",    value: $tailFadeDist,     range: 10...200,   format: "%.0fpt")
+        VStack(spacing: 0) {
+            // Drag handle
+            Capsule()
+                .fill(Color.secondary.opacity(0.35))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+                .padding(.bottom, 20)
+
+            // Title row
+            HStack {
+                Text("Animation")
+                    .font(.system(size: 17, weight: .semibold))
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 22))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 22)
+
+            // Sliders
+            VStack(spacing: 20) {
+                SliderRow(label: "Speed",      value: $collapseDuration, range: 0.2...1.2,  format: "%.2fs")
+                SliderRow(label: "Suck Power", value: $botPower,         range: 1.0...6.0,  format: "%.1f")
+                SliderRow(label: "Squeeze",    value: $squeezeA,         range: 1.0...4.0,  format: "%.1f")
+                SliderRow(label: "Fade Zone",  value: $tailFadeDist,     range: 10...200,   format: "%.0fpt")
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 44)
         }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.regularMaterial)
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .offset(y: dragOffset)
+        .gesture(
+            DragGesture()
+                .onChanged { drag in
+                    if drag.translation.height > 0 {
+                        dragOffset = drag.translation.height
+                    }
+                }
+                .onEnded { drag in
+                    if drag.translation.height > 80 {
+                        onClose()
+                        dragOffset = 0
+                    } else {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
     }
 }
 
@@ -155,16 +228,18 @@ struct SliderRow: View {
     let format: String
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
-                .frame(width: 75, alignment: .leading)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text(String(format: format, value))
+                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                    .foregroundColor(.primary)
+            }
             Slider(value: $value, in: range)
-            Text(String(format: format, value))
-                .font(.system(size: 12, weight: .medium).monospacedDigit())
-                .foregroundColor(.primary)
-                .frame(width: 48, alignment: .trailing)
+                .tint(.primary)
         }
     }
 }
