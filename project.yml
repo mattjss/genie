@@ -1,0 +1,27 @@
+name: Genie
+options:
+  bundleIdPrefix: com.mattsilverman
+  deploymentTarget:
+    iOS: "17.0"
+  defaultConfig: Debug
+targets:
+  Genie:
+    type: application
+    platform: iOS
+    sources:
+      - Genie
+    info:
+      path: Genie/Info.plist
+      properties:
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mattsilverman.genie
+        SWIFT_VERSION: 5.10
+        TARGETED_DEVICE_FAMILY: 1
+        ENABLE_PREVIEWS: YES
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
