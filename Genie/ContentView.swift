@@ -6,10 +6,16 @@ struct ContentView: View {
     @State private var diScale: CGFloat = 1.0
     @State private var showControls = false
 
-    @State private var collapseDuration: Double = 0.45
-    @State private var botPower: Double = 3.0
-    @State private var squeezeA: Double = 2.2
-    @State private var tailFadeDist: Double = 80.0
+    // Defaults tuned to match the macOS genie reference
+    static let defaultDuration:  Double = 0.42
+    static let defaultBotPower:  Double = 3.0
+    static let defaultSqueezeA:  Double = 2.6
+    static let defaultFadeDist:  Double = 55.0
+
+    @State private var collapseDuration: Double = defaultDuration
+    @State private var botPower: Double         = defaultBotPower
+    @State private var squeezeA: Double         = defaultSqueezeA
+    @State private var tailFadeDist: Double     = defaultFadeDist
 
     let cardW:  CGFloat = 268
     let cardH:  CGFloat = 268
@@ -83,6 +89,10 @@ struct ContentView: View {
                         botPower: $botPower,
                         squeezeA: $squeezeA,
                         tailFadeDist: $tailFadeDist,
+                        defaults: (ContentView.defaultDuration,
+                                   ContentView.defaultBotPower,
+                                   ContentView.defaultSqueezeA,
+                                   ContentView.defaultFadeDist),
                         onClose: {
                             withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                 showControls = false
@@ -151,9 +161,19 @@ struct ControlSheet: View {
     @Binding var botPower: Double
     @Binding var squeezeA: Double
     @Binding var tailFadeDist: Double
+    let defaults: (Double, Double, Double, Double)
     let onClose: () -> Void
 
     @State private var dragOffset: CGFloat = 0
+
+    func reset() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+            collapseDuration = defaults.0
+            botPower         = defaults.1
+            squeezeA         = defaults.2
+            tailFadeDist     = defaults.3
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -167,6 +187,10 @@ struct ControlSheet: View {
                 Text("Animation")
                     .font(.system(size: 17, weight: .semibold))
                 Spacer()
+                Button("Reset") { reset() }
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.accentColor)
+                    .padding(.trailing, 14)
                 Button(action: onClose) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 22))
