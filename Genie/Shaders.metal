@@ -12,16 +12,18 @@ using namespace metal;
     float restBotY,
     float diTop,
     float screenH,
-    float botPower,     // vertical lag exponent (3 = cubic, higher = bottom lags more)
-    float squeezeA,     // side-curve exponent scale (higher = more convex, bottom stays wide longer)
-    float tailFadeDist  // pt below pill bottom where tail begins dissolving
+    float botPower,     // vertical lag exponent — higher = bottom stays down longer
+    float squeezeA,     // side-curve exponent scale — higher = wider funnel for longer
+    float tailFadeDist  // unused, kept for control panel compatibility
 ) {
     float t = progress;
 
     float py_screen = position.y + restTopY;
     float px        = position.x / viewSize.x;
 
-    // Vertical: top races linearly, bottom lags on t^botPower
+    // ── Vertical bounds ────────────────────────────────────────────────────────
+    // Top races linearly. Bottom lags on t^botPower so it barely moves until
+    // the final third, then snaps up — creates the elongated stretch phase.
     float animTopY = restTopY + (diTop - restTopY) * t;
     float animBotY = restBotY + (diTop - restBotY) * pow(t, botPower);
 
@@ -30,13 +32,13 @@ using namespace metal;
     // Normalised row (0 = top of live shape, 1 = bottom)
     float py_src = (py_screen - animTopY) / max(animBotY - animTopY, 0.001);
 
-    // Phase 1 (t < 0.18): pure vertical stretch, no squeeze — card elongates visibly.
-    // Phase 2 (t ≥ 0.18): squeeze kicks in with per-row curved power law.
-    // Each row follows tSq^(1 + py_src * squeezeA):
-    //   top row squeezes at t^1 (fastest), bottom at t^(1+squeezeA) (slowest → convex sides).
-    float tSq     = max(0.0, (t - 0.18) / 0.82);   // remapped squeeze-only progress
+    // ── Horizontal squeeze ─────────────────────────────────────────────────────
+    // Each row follows t^(1 + py_src * squeezeA):
+    //   top (py_src=0)  → t^1  — squeezes immediately and fast
+    //   bottom (py_src=1) → t^(1+squeezeA) — extremely slow start, fast finish
+    // This makes the sides genuinely convex/curved and the bottom stay wide.
     float rowPow  = 1.0 + py_src * squeezeA;
-    float squeeze = pow(tSq, rowPow);
+    float squeeze = pow(t, rowPow);
     float rowW    = mix(1.0, pillRatio, squeeze);
 
     float leftEdge  = 0.5 - rowW * 0.5;
@@ -44,19 +46,25 @@ using namespace metal;
 
     if (px < leftEdge || px > rightEdge) return half4(0);
 
+    // ── Source image mapping ───────────────────────────────────────────────────
     float strip = max(rightEdge - leftEdge, 0.001);
     float srcX  = clamp((px - leftEdge) / strip, 0.0, 1.0);
+    float srcY  = py_src * viewSize.y;
 
-    // 2-pixel anti-aliased edges
-    float aa = smoothstep(0.0, 2.0 / viewSize.x, px - leftEdge)
-             * smoothstep(0.0, 2.0 / viewSize.x, rightEdge - px);
+    // 1-pixel crisp anti-aliased edges
+    float aa = smoothstep(0.0, 1.5 / viewSize.x, px - leftEdge)
+             * smoothstep(0.0, 1.5 / viewSize.x, rightEdge - px);
 
-    // Tail fade: dissolve bottom rows as animBotY approaches DI pill bottom
-    float diBottom  = diTop + 37.0;
-    float tailToBot = max(animBotY - diBottom, 0.0);
-    float tailFade  = 1.0 - saturate(1.0 - tailToBot / max(tailFadeDist, 1.0)) * py_src;
+    // ── No opacity fade ────────────────────────────────────────────────────────
+    // Image stays at full opacity throughout — it disappears only because the
+    // DI pill (rendered on top in ZStack) covers it as the genie enters.
+    // Only clip the very last pixels right at the DI pill bottom edge so there
+    // is no hard seam on the few pixels that slip below the pill before being
+    // covered.
+    float diBottom   = diTop + 37.0;
+    float edgeFade   = smoothstep(diBottom + 4.0, diBottom, py_screen);
+    float fade       = mix(1.0, edgeFade, saturate((animTopY - diTop + 20.0) / 20.0));
 
-    float srcY = py_src * viewSize.y;
     half4 color = layer.sample(float2(srcX * viewSize.x, srcY));
-    return color * half(aa) * half(tailFade);
+    return color * half(aa) * half(fade);
 }
