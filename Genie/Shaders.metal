@@ -54,11 +54,11 @@ using namespace metal;
     float aa = smoothstep(0.0, 2.0 / viewSize.x, px - leftEdge)
              * smoothstep(0.0, 2.0 / viewSize.x, rightEdge - px);
 
-    // Fade the whole genie out as its top enters the DI zone (diTop..diTop+pillH=51)
-    // This makes the card appear to dissolve cleanly into the DI pill.
-    float pillH    = 37.0;
-    float enterPct = saturate((animTopY - diTop) / pillH);  // 1 when far, 0 when fully inside DI
-    float fade     = enterPct * enterPct;  // squared → snappier fade
+    // Fade out only in the final 20pt before the DI top — keeps genie visible
+    // all the way to the DI, then dissolves cleanly as it enters the pill.
+    float fadeZone = 20.0;
+    float enterPct = saturate((animTopY - diTop) / fadeZone);
+    float fade     = enterPct * enterPct;
 
     // Sample from view-local source coords
     float srcY = py_src * viewSize.y;
