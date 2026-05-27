@@ -54,11 +54,8 @@ using namespace metal;
     float aa = smoothstep(0.0, 2.0 / viewSize.x, px - leftEdge)
              * smoothstep(0.0, 2.0 / viewSize.x, rightEdge - px);
 
-    // Fade out only in the final 20pt before the DI top — keeps genie visible
-    // all the way to the DI, then dissolves cleanly as it enters the pill.
-    float fadeZone = 20.0;
-    float enterPct = saturate((animTopY - diTop) / fadeZone);
-    float fade     = enterPct * enterPct;
+    // No fade — the DI pill on top provides visual coverage as the genie enters it.
+    float fade = 1.0;
 
     // Sample from view-local source coords
     float srcY = py_src * viewSize.y;

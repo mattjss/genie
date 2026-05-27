@@ -51,9 +51,9 @@ struct ContentView: View {
                 if isCollapsed {
                     Color.clear
                         .frame(width: geo.size.width, height: 110)
-                        .position(x: geo.size.width / 2, y: 55)
-                        .onTapGesture { expand() }
                         .contentShape(Rectangle())
+                        .onTapGesture { expand() }
+                        .position(x: geo.size.width / 2, y: 55)
                 }
             }
             .ignoresSafeArea()
@@ -81,10 +81,14 @@ struct ContentView: View {
     }
 
     func expand() {
+        // Set collapsed state (progress=1) and make visible in the same frame,
+        // then animate outward next frame — prevents flash at progress=0.
         progress    = 1.0
         isCollapsed = false
-        withAnimation(.easeOut(duration: 0.45)) {
-            progress = 0.0
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.45)) {
+                self.progress = 0.0
+            }
         }
     }
 }
