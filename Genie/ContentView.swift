@@ -6,15 +6,16 @@ struct ContentView: View {
     @State private var diScale: CGFloat = 1.0
     @State private var showControls = false
 
-    static let defaultDuration:     Double = 0.7
-    static let defaultBotPower:     Double = 5.0
-    static let defaultSqueezeZone:  Double = 1400.0
-    static let defaultUnused:       Double = 0.0
+    // Defaults tuned from reference video analysis (~220ms collapse, heavy blur, dramatic funnel)
+    static let defaultDuration:  Double = 0.35
+    static let defaultBotPower:  Double = 1.8
+    static let defaultSqueezeA:  Double = 4.0
+    static let defaultBlurMax:   Double = 20.0
 
     @State private var collapseDuration: Double = defaultDuration
     @State private var botPower: Double         = defaultBotPower
-    @State private var squeezeZone: Double      = defaultSqueezeZone
-    @State private var unused: Double           = defaultUnused
+    @State private var squeezeA: Double         = defaultSqueezeA
+    @State private var blurMax: Double          = defaultBlurMax
 
     let cardW:  CGFloat = 268
     let cardH:  CGFloat = 268
@@ -40,11 +41,11 @@ struct ContentView: View {
                             .float(Float(pillW / cardW)),
                             .float(Float(geo.size.height / 2 - cardH / 2)),
                             .float(Float(geo.size.height / 2 + cardH / 2)),
-                            .float(14.0),
+                            .float(14.0),                          // diTop = top of DI pill
                             .float(Float(geo.size.height)),
                             .float(Float(botPower)),
-                            .float(Float(squeezeZone)),
-                            .float(Float(unused))
+                            .float(Float(squeezeA)),
+                            .float(Float(blurMax))
                         ),
                         maxSampleOffset: CGSize(width: cardW / 2,
                                                 height: geo.size.height / 2)
@@ -86,10 +87,12 @@ struct ContentView: View {
                     ControlSheet(
                         collapseDuration: $collapseDuration,
                         botPower: $botPower,
-                        squeezeZone: $squeezeZone,
+                        squeezeA: $squeezeA,
+                        blurMax: $blurMax,
                         defaults: (ContentView.defaultDuration,
                                    ContentView.defaultBotPower,
-                                   ContentView.defaultSqueezeZone),
+                                   ContentView.defaultSqueezeA,
+                                   ContentView.defaultBlurMax),
                         onClose: {
                             withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
                                 showControls = false
@@ -125,17 +128,19 @@ struct ContentView: View {
     }
 
     func collapse() {
-        withAnimation(.timingCurve(0.4, 0.0, 0.8, 1.0, duration: collapseDuration)) {
+        // Ease-in: slow start then snaps fast into DI — matches reference vacuum feel
+        withAnimation(.timingCurve(0.5, 0.0, 0.9, 1.0, duration: collapseDuration)) {
             progress = 1.0
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + collapseDuration - 0.03) {
             isCollapsed = true
             progress = 0
-            withAnimation(.spring(response: 0.14, dampingFraction: 0.28)) {
-                diScale = 1.22
+            // DI boop: quick overshoot then settle
+            withAnimation(.spring(response: 0.12, dampingFraction: 0.25)) {
+                diScale = 1.28
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.52)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.50)) {
                     diScale = 1.0
                 }
             }
@@ -146,7 +151,8 @@ struct ContentView: View {
         progress    = 1.0
         isCollapsed = false
         DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: collapseDuration)) {
+            // Ease-out: bursts out fast then decelerates into place
+            withAnimation(.timingCurve(0.1, 0.0, 0.5, 1.0, duration: collapseDuration * 1.4)) {
                 self.progress = 0.0
             }
         }
@@ -156,8 +162,9 @@ struct ContentView: View {
 struct ControlSheet: View {
     @Binding var collapseDuration: Double
     @Binding var botPower: Double
-    @Binding var squeezeZone: Double
-    let defaults: (Double, Double, Double)
+    @Binding var squeezeA: Double
+    @Binding var blurMax: Double
+    let defaults: (Double, Double, Double, Double)
     let onClose: () -> Void
 
     @State private var dragOffset: CGFloat = 0
@@ -166,7 +173,8 @@ struct ControlSheet: View {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
             collapseDuration = defaults.0
             botPower         = defaults.1
-            squeezeZone      = defaults.2
+            squeezeA         = defaults.2
+            blurMax          = defaults.3
         }
     }
 
@@ -197,9 +205,10 @@ struct ControlSheet: View {
             .padding(.bottom, 22)
 
             VStack(spacing: 20) {
-                SliderRow(label: "Speed",   value: $collapseDuration, range: 0.2...1.6,    format: "%.2fs")
-                SliderRow(label: "Lag",     value: $botPower,         range: 1.0...10.0,   format: "%.1f")
-                SliderRow(label: "Zone",    value: $squeezeZone,      range: 200...3000,   format: "%.0f")
+                SliderRow(label: "Speed",   value: $collapseDuration, range: 0.15...1.6,  format: "%.2fs")
+                SliderRow(label: "Lag",     value: $botPower,         range: 0.5...6.0,   format: "%.1f")
+                SliderRow(label: "Funnel",  value: $squeezeA,         range: 0.5...8.0,   format: "%.1f")
+                SliderRow(label: "Blur",    value: $blurMax,          range: 0.0...40.0,  format: "%.0f")
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 44)
